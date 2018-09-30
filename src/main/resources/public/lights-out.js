@@ -1,19 +1,20 @@
 let gameIdentifier = null;
+let gameStateWebSocket = null;
 
 window.addEventListener("load", async () => {
     document.querySelector("body").innerHTML = await (await fetch("/lights-out.svg")).text();
     newGame();
-    poll();
 });
 
 const newGame = async () => {
     gameIdentifier = await (await fetch("/games", { method: "POST" })).text();
+    newGameStateWebSocket();
 };
 
-const poll = async () => {
-    if (gameIdentifier !== null) render((await (await fetch(`/games/${gameIdentifier}`)).json()).board);
-    await sleep(200);
-    poll();
+const newGameStateWebSocket = () => {
+    if (gameStateWebSocket !== null) gameStateWebSocket.close();
+    gameStateWebSocket = new WebSocket(`ws://${location.hostname}:${location.port}/games/${gameIdentifier}`);
+    gameStateWebSocket.addEventListener("message", event => render(JSON.parse(event.data).board));
 };
 
 const render = board => {
@@ -31,5 +32,3 @@ const move = async (row, column) => {
 const cheat = async () => {
     await fetch(`/games/${gameIdentifier}/cheat`, { method: "PUT" });
 };
-
-const sleep = duration => new Promise(resolve => window.setTimeout(resolve, duration));
